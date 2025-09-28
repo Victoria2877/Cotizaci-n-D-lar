@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    // otros servicios...
+    'dolarapi' => [
+        'url' => env('DOLAR_API_URL', 'https://dolarapi.com/v1/dolares'),
+    ],
 ];

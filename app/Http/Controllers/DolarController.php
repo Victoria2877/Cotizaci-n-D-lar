@@ -2,71 +2,39 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use GuzzleHttp\Client;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 
 class DolarController extends Controller
 {
     /**
-     * Muestra la vista con las cotizaciones del dólar.
-     * Consume la API pública y maneja errores para no romper la UI.
+     * Muestra la vista con tarjetas y datos cacheados 5 minutos.
      */
-    public function cotizacion()
+    public function index()
     {
-        // Cliente Guzzle (podés ajustar timeout y headers si querés)
-        $client = new Client([
-            'timeout' => 8, // segundos
-        ]);
-
-        try {
-            // Endpoint de Argentina que devuelve cotizaciones (oficial, blue, etc.)
-            // Ver docs oficiales de DolarApi. :contentReference[oaicite:0]{index=0}
-            $response = $client->get('https://dolarapi.com/v1/dolares');
-
-            // Decodificamos JSON como array asociativo
-            $datos = json_decode($response->getBody(), true);
-
-            return view('dolar', ['cotizaciones' => $datos]);
-        } catch (\Throwable $e) {
-            // Log para depurar en local
-            Log::error('Error obteniendo cotizaciones: '.$e->getMessage());
-
-            return view('dolar', [
-                'error' => 'Error al obtener cotizaciones: ' . $e->getMessage(),
-                'cotizaciones' => []
-            ]);
-        }
+        $cotizaciones = $this->getCotizaciones();
+        return view('dolar', compact('cotizaciones'));
     }
 
     /**
-     * Endpoint JSON propio (/api/cotizacion)
-     * Útil si querés consumirlo desde frontends o Postman.
+     * Devuelve JSON (lo usa el botón "Actualizar" y la ruta /api/cotizaciones).
      */
-    public function apiCotizacion()
+    public function json()
     {
-        $client = new Client([
-            'timeout' => 8,
-        ]);
+        return response()->json($this->getCotizaciones());
+    }
 
-        try {
-            $response = $client->get('https://dolarapi.com/v1/dolares');
-            $datos = json_decode($response->getBody(), true);
-
-            return response()->json([
-                'status' => 'success',
-                'data' => $datos,
-                'fecha' => now()->setTimezone(config('app.timezone'))->format('Y-m-d H:i:s')
-            ]);
-        } catch (\Throwable $e) {
-            Log::error('API /api/cotizacion error: '.$e->getMessage());
-
-            return response()->json([
-                'status' => 'error',
-                'message' => 'No se pudo obtener la cotización',
-                'detail' => $e->getMessage(),
-            ], 500);
-        }
+    /**
+     * Llama a la API con reintentos y cachea el resultado 5 minutos.
+     */
+    private function getCotizaciones(): array
+    {
+        return Cache::remember('cotizaciones.dolarapi', now()->addMinutes(5), function () {
+            $url = config('services.dolarapi.url');
+            $resp = Http::retry(3, 200)->timeout(10)->get($url);
+            $resp->throw();
+            return $resp->json();
+        });
     }
 }
 
