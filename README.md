@@ -1,61 +1,104 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Cotización del Dólar (Laravel + Tailwind + Vite)
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Aplicación Laravel que consume `dolarapi.com`, **cachea** las respuestas y muestra **tarjetas** con borde por tipo.  
+Incluye **endpoint JSON**, botón **Actualizar** con *spinner* y un **comando** para refrescar el caché.
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Requisitos
+- PHP 8.2+ y Composer
+- MySQL/MariaDB
+- Node 18+ y NPM
+- Extensiones PHP típicas de Laravel
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+---
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Instalación
 
-## Learning Laravel
+```bash
+git clone https://github.com/Victoria2877/Cotizaci-n-D-lar.git
+cd Cotizaci-n-D-lar
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+composer install
+npm install
+cp .env.example .env
+php artisan key:generate
+Configura la base de datos en .env:
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=cotizadordolar
+DB_USERNAME=root
+DB_PASSWORD=
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
-
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-## Laravel Sponsors
-
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
-
-### Premium Partners
-
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
-
-## Contributing
-
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
-
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+DOLAR_API_URL=https://dolarapi.com/v1/dolares
+Crea migraciones de soporte y migra:
+php artisan cache:table
+php artisan session:table
+php artisan queue:table   # opcional
+php artisan migrate
+Desarrollo
+En una terminal:
+npm run dev
+En otra terminal:
+php artisan serve
+Abre: http://127.0.0.1:8000
+Scripts NPM
+npm run dev – Vite en modo desarrollo
+npm run build – Build de producción
+Endpoints
+GET / – Vista con tarjetas y botón Actualizar
+GET /api/cotizaciones – Devuelve el JSON (cacheado 5 min)
+Estructura relevante
+app/
+  Console/
+    Commands/RefreshDollarRates.php   # comando para rellenar el caché
+    Kernel.php                        # scheduler cada 10 min
+  Http/Controllers/DolarController.php
+config/services.php                   # DOLAR_API_URL
+resources/
+  views/dolar.blade.php               # UI con tarjetas y botón Actualizar
+  css/app.css                         # directivas Tailwind
+  js/app.js                           # entrada Vite
+tailwind.config.js
+postcss.config.js
+vite.config.js
+Comando y Scheduler
+Refrescar caché manualmente:
+php artisan rates:refresh
+Scheduler (ya configurado en App\Console\Kernel):
+$schedule->command('rates:refresh')->everyTenMinutes();
+En desarrollo puedes correr:
+php artisan schedule:work
+En servidor, un cron con:
+php artisan schedule:run
+cada minuto.
+Notas técnicas
+Caché: Cache::remember('cotizaciones.dolarapi', now()->addMinutes(5))
+HTTP: Http::retry(3, 200)->timeout(10)->get(...)->throw()
+Normalización avanzada:
+PHP: Str::slug($nombre) para mapear colores por tipo
+JS: función slug() (quita acentos/espacios) y fmtARS() para formato
+Eliminación de redundancias:
+Helpers en Blade/JS (renderCard, renderGrid) para evitar HTML duplicado
+Troubleshooting
+php artisan optimize:clear falla por tabla cache inexistente
+Crea la migración y migra:
+php artisan cache:table
+php artisan migrate
+Tailwind no aplica estilos / Warning content
+Asegura tailwind.config.js:
+export default {
+  content: [
+    "./resources/views/**/*.blade.php",
+    "./resources/js/**/*.js",
+    "./resources/**/*.vue"
+  ],
+  theme: { extend: {} },
+  plugins: [],
+}
+Error Vite @tailwindcss/vite
+Este proyecto usa Tailwind v3. Utiliza postcss.config.js + tailwind.config.js.
+No importes el plugin de Tailwind v4.
+Licencia
+MIT
