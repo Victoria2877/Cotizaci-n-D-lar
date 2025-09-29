@@ -1,0 +1,29 @@
+# Ignorar dependencias locales
+node_modules
+vendor
+
+# Archivos de configuración local
+.env
+.env.local
+.env.*.local
+
+# Git
+.git
+.gitignore
+
+# Archivos de IDE/Editor
+.vscode
+.idea
+
+# Logs y cachés
+npm-debug.log
+yarn-error.log
+composer.lock
+storage/logs/*
+bootstrap/cache/*
+
+# Otros innecesarios
+*.md
+*.yml
+*.yaml
+*.xml
